@@ -23,7 +23,12 @@ HEADERS = {
 
 def change_proxy():
     global valid_proxies, PROXY, PROXY_ID
-    PROXY = valid_proxies[PROXY_ID+1]
+
+    if PROXY_ID+1 >= len(valid_proxies):
+        PROXY_ID = 0
+        PROXY = valid_proxies[PROXY_ID]
+    else:
+        PROXY = valid_proxies[PROXY_ID+1]
 
 
 file = input('Напишите полное название файла: ')
@@ -53,7 +58,7 @@ PROXY_ID = 0
 print('Начинаю анализировать ссылки.')
 print('')
 valid_df = pd.DataFrame(columns=df.columns)
-for i in tqdm(range(len(df[:120]))):
+for i in tqdm(range(len(df))):
     link = df.iloc[i][df.columns[1]]
     try:
         resp = requests.get(link, proxies={'http': proxy}, headers=HEADERS)
@@ -66,23 +71,27 @@ for i in tqdm(range(len(df[:120]))):
         resp = requests.get(link, proxies={'http': proxy}, headers=HEADERS)
 
     soup = BeautifulSoup(resp.text, 'lxml')
-    div = soup.find('div', class_='a-fixed-right-grid-col ie7-width-935 a-col-left')
-    labels = div.find_all('label', class_='a-form-label')
+    try:
+        div = soup.find('div', class_='a-fixed-right-grid-col ie7-width-935 a-col-left')
+        labels = div.find_all('label', class_='a-form-label')
 
-    metal = length = False
-    if labels:
-        for label in labels:
-            if 'Metal Type' in label.text.strip() or \
-              'Métal' in label.text.strip() or \
-              'Tipo di metallo' in label.text.strip():
-                metal = True
-            if 'Länge' in label.text.strip() or \
-                'Longueur' in label.text.strip() or \
-                'Lunghezza' in label.text.strip():
-                length = True
+        metal = length = False
+        if labels:
+            for label in labels:
+                if 'Metal Type' in label.text.strip() or \
+                  'Métal' in label.text.strip() or \
+                  'Tipo di metallo' in label.text.strip():
+                    metal = True
+                if 'Länge' in label.text.strip() or \
+                    'Longueur' in label.text.strip() or \
+                    'Lunghezza' in label.text.strip():
+                    length = True
 
-    if not metal and not length:
-        valid_df = valid_df.append(df.iloc[i:i+1])
+        if not metal and not length:
+            valid_df = valid_df.append(df.iloc[i:i+1])
+    except Exception:
+        continue
+
 
     time.sleep(random.randint(0, 3))
 
